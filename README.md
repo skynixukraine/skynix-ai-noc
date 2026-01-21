@@ -1,6 +1,6 @@
-# AI-NOC Core
+# Skynix AI-NOC Core
 
-AI-NOC Core is a lightweight, logs-first Network Operations Center engine designed for real-world infrastructure where log formats vary, dashboards are not required, and operational output must be actionable.
+Skynix AI-NOC Core is a lightweight, logs-first Network Operations Center engine designed for real-world infrastructure where log formats vary, dashboards are not required, and operational output must be actionable.
 
 The system collects raw web and VPN logs via agents, automatically adapts to existing log formats, extracts real client IPs, correlates events into incidents, and delivers alerts and reports without requiring changes to Nginx or OpenVPN configurations.
 
@@ -278,6 +278,194 @@ No Nginx configuration changes are required.
 - Connection flapping via status file
 
 Rules are deterministic, time-window based, and explainable.
+
+
+## Overview the central/core server
+
+The Core is the central FastAPI service responsible for:
+
+- Receiving log events from agents
+- Verifying agent authenticity (HMAC)
+- Storing raw logs
+- Correlating events into incidents
+- Sending alerts and generating reports
+
+---
+
+## Requirements
+
+### System
+
+- Linux (Ubuntu/Debian or CentOS/RHEL)
+- Python 3.11+
+- PostgreSQL 14+
+- Disk space for raw logs
+
+### Network
+
+- TCP port 8080 (or custom)
+- HTTPS recommended in production
+
+---
+
+## Environment Variables
+
+The Core is fully configured via environment variables.
+
+```bash
+DATABASE_URL=postgresql://user:password@127.0.0.1:5432/ainoc
+RAW_DIR=/var/lib/ai-noc/raw
+AGENT_SECRET__srv-web-01=super-long-random-secret
+```
+
+### Description
+
+- `DATABASE_URL` – PostgreSQL connection string (**required**)
+- `RAW_DIR` – directory for raw gzip log storage
+- `AGENT_SECRET__<agent_id>` – HMAC secret for each agent
+
+---
+
+## Deployment Options
+
+## Option 1: Docker Compose (Local / Test)
+
+### Steps
+
+```bash
+cd examples
+docker compose up -d --build
+```
+
+### Verify
+
+```bash
+curl http://localhost:8080/health
+```
+
+```json
+{"ok": true}
+```
+
+---
+
+## Option 2: Bare Metal / VM (Production)
+
+### 1. Create system user
+
+```bash
+useradd -r -s /usr/sbin/nologin ainoc
+mkdir -p /opt/ai-noc
+chown ainoc:ainoc /opt/ai-noc
+```
+
+---
+
+### 2. Prepare directories
+
+```bash
+mkdir -p /var/lib/ai-noc/raw
+chown ainoc:ainoc /var/lib/ai-noc/raw
+```
+
+---
+
+### 3. Install Core
+
+```bash
+cd /opt/ai-noc
+git clone <your-repo-url> core
+cd core
+
+python -m venv .venv
+. .venv/bin/activate
+pip install -e .
+```
+
+---
+
+### 4. Initialize database
+
+```bash
+psql "$DATABASE_URL" -f migrations/001_initial.sql
+```
+
+---
+
+### 5. Run Core manually
+
+```bash
+. .venv/bin/activate
+uvicorn ai_noc_core.main:app --host 0.0.0.0 --port 8080
+```
+
+The service will be available at:
+
+```
+http://<server-ip>:8080
+```
+
+---
+
+## Running as a systemd Service
+
+### 1. Create unit file
+
+`/etc/systemd/system/ai-noc-core.service`
+
+```ini
+[Unit]
+Description=AI-NOC Core Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ainoc
+WorkingDirectory=/opt/ai-noc/core
+ExecStart=/opt/ai-noc/core/.venv/bin/uvicorn ai_noc_core.main:app --host 0.0.0.0 --port 8080
+Restart=always
+RestartSec=3
+
+Environment=DATABASE_URL=postgresql://user:password@127.0.0.1:5432/ainoc
+Environment=RAW_DIR=/var/lib/ai-noc/raw
+Environment=AGENT_SECRET__srv-web-01=super-long-random-secret
+
+[Install]
+WantedBy=multi-user.target
+```
+
+---
+
+### 2. Enable and start
+
+```bash
+systemctl daemon-reload
+systemctl enable --now ai-noc-core
+journalctl -u ai-noc-core -f
+```
+
+---
+
+## Security Notes
+
+- Always use HTTPS in production
+- Keep agent secrets unique per agent
+- Restrict access to `/ingest`
+- Raw logs may contain sensitive data – secure storage accordingly
+
+---
+
+## Validation Checklist
+
+- [ ] Core responds on `/health`
+- [ ] Database migrations applied
+- [ ] RAW_DIR writable by service user
+- [ ] Agent successfully sends events
+- [ ] Incidents appear in PostgreSQL
+
+---
+
 
 ## Data Storage
 
