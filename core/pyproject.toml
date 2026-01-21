@@ -9,6 +9,10 @@ dependencies = [
   "python-dotenv>=1.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+]
+
 [project.scripts]
 ai-noc-core = "ai_noc_core.main:run"
-
