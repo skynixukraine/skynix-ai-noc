@@ -16,3 +16,6 @@ dev = [
 
 [project.scripts]
 ai-noc-core = "ai_noc_core.main:run"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
