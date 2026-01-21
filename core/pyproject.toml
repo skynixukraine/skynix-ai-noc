@@ -1,0 +1,14 @@
+[project]
+name = "ai-noc-core"
+version = "0.1.0"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "psycopg[binary]>=3.1",
+  "pydantic>=2.6",
+  "python-dotenv>=1.0",
+]
+
+[project.scripts]
+ai-noc-core = "ai_noc_core.main:run"
+

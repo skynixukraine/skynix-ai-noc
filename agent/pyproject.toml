@@ -1,0 +1,11 @@
+[project]
+name = "ai-noc-agent"
+version = "0.1.0"
+dependencies = [
+  "pyyaml>=6.0",
+  "requests>=2.31",
+]
+
+[project.scripts]
+ai-noc-agent = "ai_noc_agent.main:main"
+

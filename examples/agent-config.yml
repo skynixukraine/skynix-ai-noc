@@ -1,0 +1,40 @@
+agent_id: srv-web-01
+host: web-01
+
+center:
+  url: "http://localhost:8080/ingest"
+  hmac_secret: "CHANGE_ME_long_random_secret"
+  gzip: true
+  timeout_seconds: 10
+  batch_max_events: 300
+  flush_interval_seconds: 2
+
+storage:
+  state_dir: "/tmp/ai-noc-agent/state"
+  spool_dir: "/tmp/ai-noc-agent/spool"
+  max_spool_mb: 1024
+
+redaction:
+  enabled: true
+  query_keys: [token, access_token, password, apikey, api_key]
+  mask: "***"
+
+sources:
+  - service: nginx_access
+    path: /var/log/nginx/access.log
+    parser: auto
+
+  - service: nginx_error
+    path: /var/log/nginx/error.log
+    parser: auto
+
+  - service: openvpn_log
+    path: /var/log/openvpn/openvpn.log
+    parser: auto
+
+  - service: openvpn_status
+    path: /var/log/openvpn/openvpn-status.log
+    mode: poll
+    poll_seconds: 10
+    parser: auto
+
